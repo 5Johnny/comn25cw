@@ -17,18 +17,32 @@ class Flow(object):
             ether = Ether(pkt)
             if ether.type == 0x86dd:
                 ip = ether[IPv6]
-                #
-                # write your code here
-                #
+                if ip.nh != IPPROTO_TCP:
+                    continue
+                plen = ip.plen
+                sip = int(IPv6Address(ip.src))
+                dip = int(IPv6Address(ip.dst))
             elif ether.type == 0x0800:
                 ip = ether[IP]
-                #
-                # write your code here
-                #
+                if ip.proto != IPPROTO_TCP:
+                    continue
+                plen = ip.len - ip.ihl * 4
+                sip = int(ip_address(ip.src))
+                dip = int(ip_address(ip.dst))
+            if not ip.haslayer(TCP):
+                continue
             tcp = ip[TCP]
-            #
-            # write your code here
-            #
+            plen -= tcp.dataofs * 4
+            if plen == 0:
+                continue
+            tcpflow = (sip, dip, tcp.sport, tcp.dport)
+            rflow = (dip, sip, tcp.dport, tcp.sport)
+            if tcpflow in self.ft:
+                self.ft[tcpflow] += plen
+            elif rflow in self.ft:
+                self.ft[rflow] += plen
+            else:
+                self.ft[tcpflow] = plen
     def Plot(self):
         topn = 100
         data = [i/1000 for i in list(self.ft.values())]

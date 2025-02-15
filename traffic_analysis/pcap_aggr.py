@@ -12,9 +12,18 @@ class Node(object):
         self.right = None
         self.ip = ip
     def add(self, ip, plen):
-        #
-        # write your code here
-        #
+        if ip_address(ip) < self.ip:
+            if self.left is None:
+                self.left = Node(ip, plen)
+            else:
+                self.left.add(ip, plen)
+        elif ip_address(ip) > self.ip:
+            if self.right is None:
+                self.right = Node(ip, plen)
+            else:
+                self.right.add(ip, plen)
+        else:
+            self.bytes += plen
     def data(self, data):
         if self.left:
             self.left.data(data)
@@ -27,14 +36,28 @@ class Node(object):
         # arguments are either IPv4Address or IPv4Network
         na1 = ip_network(ip1).network_address
         na2 = ip_network(ip2).network_address
-        #
-        # write your code here
-        #
+        msb = int(na1) ^ int(na2)
+        netmask = 32 - msb.bit_length()
         return ip_network('{}/{}'.format(na1, netmask), strict=False)
     def aggr(self, byte_thresh):
-        #
-        # write your code here
-        #
+        if self.left:
+            self.left.aggr(byte_thresh)
+            if self.left.bytes < byte_thresh:
+                self.ip = self.supernet(self.ip, self.left.ip)
+                self.bytes += self.left.bytes
+                if self.left.left or self.left.right:
+                    self.left.bytes = 0
+                else:
+                    self.left = None
+        if self.right:
+            self.right.aggr(byte_thresh)
+            if self.right.bytes < byte_thresh:
+                self.bytes += self.right.bytes
+                self.ip = self.supernet(self.ip, self.right.ip)
+                if self.right.left or self.right.right:
+                    self.right.bytes = 0
+                else:
+                    self.right = None
             
 class Data(object):
     def __init__(self, data):
